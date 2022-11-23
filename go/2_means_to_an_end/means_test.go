@@ -2,11 +2,12 @@ package main
 
 import (
 	"bytes"
+	"encoding/binary"
 	"net"
 	"testing"
 )
 
-func TestReadMessage(t *testing.T) {
+func TestHandleMessage(t *testing.T) {
 	s := StartServer()
 	go ServeMeans(s)
 
@@ -47,4 +48,29 @@ func TestReadMessage(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestReadMessage(t *testing.T) {
+	t.Logf("%x", newMessage(insert, 12345, 101))
+}
+
+// helper functions
+
+const (
+	insert = iota
+	query
+)
+
+func newMessage(messageType uint8, arg1, arg2 int32) []byte {
+	result := make([]byte, 1)
+	if messageType == insert {
+		result[0] = byte('I')
+	} else if messageType == query {
+		result[0] = byte('Q')
+	}
+
+	result = binary.BigEndian.AppendUint32(result, uint32(arg1))
+	result = binary.BigEndian.AppendUint32(result, uint32(arg2))
+
+	return result
 }
