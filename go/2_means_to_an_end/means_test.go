@@ -51,17 +51,79 @@ func TestHandleMessage(t *testing.T) {
 }
 
 func TestReadMessage(t *testing.T) {
+	tt := []struct {
+		test            string
+		message         []byte
+		wantMessageType int
+		wantArg1        int32
+		wantArg2        int32
+		wantErr         error
+	}{
+		{
+			"reads simple insert message",
+			newMessage(insert, 12345, 101),
+			insert,
+			12345,
+			101,
+			nil,
+		},
+		{
+			"reads simple query message",
+			newMessage(query, 1000, 10000),
+			query,
+			1000,
+			10000,
+			nil,
+		},
+		{
+			"reads insert message with negative price",
+			newMessage(insert, 12345, -101),
+			insert,
+			12345,
+			-101,
+			nil,
+		},
+		{
+			"returns an error if first byte does not specify type",
+			[]byte{byte('A'), 0, 0, 48, 57, 0, 0, 0, 101},
+			0,
+			0,
+			0,
+			ErrNoMessageType,
+		},
+		{
+			"returns an error if the message is less than 9 bytes",
+			[]byte{byte('A'), 0, 0, 48, 57, 101},
+			0,
+			0,
+			0,
+			ErrMessageLength,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.test, func(t *testing.T) {
+			gotMessageType, gotArg1, gotArg2, err := readMessage(tc.message)
+			if tc.wantErr != err {
+				t.Errorf("Got unexpected error: %v, want %v", err, tc.wantErr)
+			}
+			if gotMessageType != tc.wantMessageType {
+				t.Errorf("Got message type %v, want %v", gotMessageType, tc.wantMessageType)
+			}
+			if gotArg1 != tc.wantArg1 {
+				t.Errorf("Got Arg1 %v, want %v", gotArg1, tc.wantArg1)
+			}
+			if gotArg2 != tc.wantArg2 {
+				t.Errorf("Got Arg2 %v, want %v", gotArg2, tc.wantArg2)
+			}
+		})
+	}
 	t.Logf("%x", newMessage(insert, 12345, 101))
 }
 
 // helper functions
 
-const (
-	insert = iota
-	query
-)
-
-func newMessage(messageType uint8, arg1, arg2 int32) []byte {
+func newMessage(messageType int, arg1, arg2 int32) []byte {
 	result := make([]byte, 1)
 	if messageType == insert {
 		result[0] = byte('I')
