@@ -12,14 +12,25 @@ func TestHandleMessage(t *testing.T) {
 	go ServeMeans(s)
 
 	tt := []struct {
-		test    string
-		message []byte
-		want    []byte
+		test     string
+		messages [][]byte
+		want     []byte
 	}{
 		{
 			"Invalid query",
-			[]byte("hello server"),
+			[][]byte{[]byte("hello server")},
 			[]byte("Invalid request"),
+		},
+		{
+			"Normal session",
+			[][]byte{
+				newMessage(insert, 12345, 101),
+				newMessage(insert, 12346, 102),
+				newMessage(insert, 12347, 100),
+				newMessage(insert, 40960, 5),
+				newMessage(query, 12288, 16384),
+			},
+			[]byte{0, 0, 0, 101},
 		},
 	}
 
@@ -31,8 +42,10 @@ func TestHandleMessage(t *testing.T) {
 			}
 			defer conn.Close()
 
-			if _, err := conn.Write(tc.message); err != nil {
-				t.Error("could not write message to TCP server:", err)
+			for _, message := range tc.messages {
+				if _, err := conn.Write(message); err != nil {
+					t.Error("could not write message to TCP server:", err)
+				}
 			}
 
 			out := make([]byte, 20)

@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -19,8 +19,9 @@ var (
 	ErrMessageLength = errors.New("message is less than 9 bytes")
 )
 
-func main() {
-	fmt.Println("vim-go")
+type priceRecord struct {
+	timestamp int32
+	price     int32
 }
 
 func StartServer() net.Listener {
@@ -47,12 +48,65 @@ func ServeMeans(ln net.Listener) {
 
 func Handle(conn net.Conn) {
 	defer conn.Close()
-	var message []byte
-	bytesRead, err := conn.Read(message)
-	if err != nil || bytesRead != 9 {
-		conn.Write([]byte("Invalid request"))
-		return
+	//	conn.SetDeadline(time.Now().Add(10 * time.Second))
+	message := make([]byte, 9)
+	var records []priceRecord
+	for {
+		_, err := io.ReadFull(conn, message)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Println("Error reading from connection: ", err)
+			break
+		}
+		messageType, arg1, arg2, readErr := readMessage(message)
+		if readErr != nil {
+			log.Println("Invalid request: ", readErr)
+			conn.Write([]byte("Invalid request"))
+			break
+		}
+		switch messageType {
+		case insert:
+			if arg1 < 0 {
+				conn.Write([]byte("Invalid request"))
+				break
+			}
+			log.Printf("connection %s, I time %d price %d", conn.RemoteAddr().String(), arg1, arg2)
+			records = append(records, priceRecord{arg1, arg2})
+		case query:
+			average, err := queryPriceRecord(records, arg1, arg2)
+			if err != nil {
+				conn.Write([]byte("Invalid request"))
+				break
+			}
+			log.Printf("connection %s, Q min %d max %d", conn.RemoteAddr().String(), arg1, arg2)
+			response := make([]byte, 4)
+			binary.BigEndian.PutUint32(response, uint32(average))
+			conn.Write(response)
+		}
 	}
+	log.Println("Session ended: ", conn.RemoteAddr())
+}
+
+func queryPriceRecord(records []priceRecord, mintime, maxtime int32) (int32, error) {
+
+	var sum int64
+	var numRecords int32
+	for _, record := range records {
+		if mintime <= record.timestamp && record.timestamp <= maxtime {
+			sum += int64(record.price)
+			numRecords++
+		}
+	}
+
+	if numRecords == 0 {
+		return 0, nil
+	}
+
+	log.Printf("Sum of %d dividing by %d", sum, numRecords)
+
+	return int32(sum / int64(numRecords)), nil
 }
 
 func readMessage(message []byte) (int, int32, int32, error) {
