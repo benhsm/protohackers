@@ -13,6 +13,7 @@ import (
 const (
 	welcomeString    = "You've connected to budget chat. Please input a username to use for this session.\n"
 	nameErrorMessage = "Usernames must contain only alphanumeric characters and cannot be longer than 16 characters in length.\n"
+	firstJoinMessage = "* You are the first person to join the chatroom!\n"
 )
 
 var (
@@ -76,6 +77,11 @@ func handle(conn net.Conn) {
 		return
 	case nil:
 		log.Printf("Registering client %v, as %s!", conn.RemoteAddr(), strings.TrimRight(string(name), "\n"))
+	}
+
+	_, err := conn.Write([]byte(firstJoinMessage))
+	if err != nil {
+		log.Println("Error writing to connection", err)
 	}
 
 	for {

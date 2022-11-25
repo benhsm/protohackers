@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"net"
 	"testing"
 )
@@ -10,20 +11,16 @@ func TestBudgetChat(t *testing.T) {
 	s := StartServer()
 	go serveBudgetChat(s)
 
-	conn1, err := net.Dial("tcp", ":9001")
-	if err != nil {
-		t.Fatalf("could not connect to server: %v", err)
-	}
+	conn1 := newConnection(t)
 	defer conn1.Close()
 
-	r1 := bufio.NewReader(conn1)
-	got, err := r1.ReadBytes('\n')
-	if err != nil {
-		t.Fatalf("error reading from connection: %v", err)
-	}
-	if string(got) != welcomeString {
-		t.Errorf("wanted welcome message '%s', got '%s'", welcomeString, got)
-	}
+	got := readMessage(t, conn1)
+	assertBytesEqual(t, got, []byte(welcomeString))
+
+	writeMessage(t, conn1, []byte("Alice\n"))
+	got = readMessage(t, conn1)
+	assertBytesEqual(t, got, []byte(firstJoinMessage))
+}
 
 func TestValidateName(t *testing.T) {
 	tt := []struct {
@@ -65,5 +62,41 @@ func TestValidateName(t *testing.T) {
 				t.Errorf("expected err '%v', got '%v'", tc.want, got)
 			}
 		})
+	}
+}
+
+// helper functions
+
+func readMessage(t *testing.T, conn net.Conn) []byte {
+	t.Helper()
+	r := bufio.NewReader(conn)
+	msg, err := r.ReadBytes('\n')
+	if err != nil {
+		t.Fatalf("error reading from connection: %v", err)
+	}
+	return msg
+}
+
+func writeMessage(t *testing.T, conn net.Conn, msg []byte) {
+	t.Helper()
+	_, err := conn.Write(msg)
+	if err != nil {
+		t.Fatalf("error writing to connection: %v", err)
+	}
+}
+
+func newConnection(t *testing.T) net.Conn {
+	t.Helper()
+	conn, err := net.Dial("tcp", ":9001")
+	if err != nil {
+		t.Fatalf("error establishing connection: %v", err)
+	}
+	return conn
+}
+
+func assertBytesEqual(t *testing.T, got, want []byte) {
+	t.Helper()
+	if bytes.Compare(got, want) != 0 {
+		t.Errorf("got %s, want %s", got, want)
 	}
 }
