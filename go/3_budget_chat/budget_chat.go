@@ -51,6 +51,7 @@ func serveBudgetChat(ln net.Listener) {
 
 func handle(conn net.Conn) {
 	defer conn.Close()
+	defer log.Println("closed connection from", conn.RemoteAddr())
 	b := bufio.NewReader(conn)
 	conn.Write([]byte(welcomeString))
 	log.Println("Sent welcome message to", conn.RemoteAddr())
@@ -83,7 +84,6 @@ func handle(conn net.Conn) {
 			break
 		}
 	}
-	log.Println("closed connection from", conn.RemoteAddr())
 }
 
 func validateName(name string) error {
