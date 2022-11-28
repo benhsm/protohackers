@@ -86,27 +86,27 @@ func TestValidateName(t *testing.T) {
 	}{
 		{
 			"accepts a name containing letters",
-			"Alice\n",
+			"Alice",
 			nil,
 		},
 		{
 			"accepts a name containing alphanumeric characters",
-			"Bob123\n",
+			"Bob123",
 			nil,
 		},
 		{
 			"rejects names containing non-alphanumeric characters",
-			"Chuck!\n",
+			"Chuck!",
 			ErrInvalidName,
 		},
 		{
 			"rejects names which are just empty strings",
-			"\n",
+			"",
 			ErrEmptyName,
 		},
 		{
 			"rejects names longer than 16 characters",
-			"12345678901234567\n",
+			"12345678901234567",
 			ErrNameTooLong,
 		},
 	}
