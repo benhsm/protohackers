@@ -10,8 +10,8 @@ import (
 )
 
 func TestBudgetChat(t *testing.T) {
-	s := StartServer()
-	go serveBudgetChat(s)
+	s := NewServer()
+	go s.serveBudgetChat()
 
 	var got string
 

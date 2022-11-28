@@ -23,24 +23,28 @@ var (
 	ErrNameTooLong     = errors.New("Name cannot be longer than 16 characters")
 )
 
-func main() {
-	s := StartServer()
-	serveBudgetChat(s)
+type budgetChatServer struct {
+	net.Listener
 }
 
-func StartServer() net.Listener {
+func main() {
+	s := NewServer()
+	s.serveBudgetChat()
+}
+
+func NewServer() budgetChatServer {
 	ln, err := net.Listen("tcp", ":9001")
 	if err != nil {
 		log.Println("listen: ", err.Error())
 		os.Exit(1)
 	}
 	log.Println("listening on port 9001")
-	return ln
+	return budgetChatServer{ln}
 }
 
-func serveBudgetChat(ln net.Listener) {
+func (b *budgetChatServer) serveBudgetChat() {
 	for {
-		conn, err := ln.Accept()
+		conn, err := b.Accept()
 		if err != nil {
 			log.Println("accept: ", err.Error())
 			os.Exit(1)
