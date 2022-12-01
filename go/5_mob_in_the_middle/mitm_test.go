@@ -89,6 +89,11 @@ func TestRewriteMsg(t *testing.T) {
 			"please send payment to " + nonAlnum + " as soon as you can",
 			"please send payment to " + nonAlnum + " as soon as you can",
 		},
+		{
+			"product ID segemented with hyphens",
+			"[BigHatter29] This is a product ID, not a Boguscoin: 78wV1pf3TfFV04i5AmIm3bmcIS4V-RZC4apb6BT4wGYlPkIRcjHqSgwnBUECbt-1234",
+			"[BigHatter29] This is a product ID, not a Boguscoin: 78wV1pf3TfFV04i5AmIm3bmcIS4V-RZC4apb6BT4wGYlPkIRcjHqSgwnBUECbt-1234",
+		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.test, func(t *testing.T) {

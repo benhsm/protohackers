@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"regexp"
+	"unicode/utf8"
 )
 
 const (
@@ -108,6 +109,42 @@ func handle(victim net.Conn) {
 	}
 }
 
-func rewriteMsg(s []byte) []byte {
-	return bogusCoinRE.ReplaceAll(s, []byte(tonysAddress))
+func rewriteMsg(src []byte) []byte {
+	re := bogusCoinRE
+	lastMatchEnd := 0 // end position of the most recent match
+	searchPos := 0    // position where we next look for a match
+	var buf []byte
+	s := src
+	endPos := len(s)
+
+	for searchPos <= endPos {
+		s = s[searchPos:]
+		loc := re.FindIndex(s)
+		if loc == nil {
+			break // no more matches
+		}
+
+		// copy the unmatched characters before this match
+		buf = append(buf, s[lastMatchEnd:loc[0]]...)
+
+		// insert a copy of the replacement string
+		if loc[1] > lastMatchEnd || loc[0] == 0 {
+			buf = append(buf, []byte(tonysAddress)...)
+		}
+		lastMatchEnd = loc[1]
+
+		// Advance past this match; always advance at least one character.
+		var width int
+		_, width = utf8.DecodeRune(s[searchPos:])
+
+		if searchPos+width > loc[1] {
+			searchPos += width
+		} else if searchPos+1 > loc[1] {
+			searchPos++
+		} else {
+			searchPos = loc[1]
+		}
+	}
+
+	return append(buf, s...)
 }
