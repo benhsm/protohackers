@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 	"regexp"
-	"unicode/utf8"
 )
 
 const (
@@ -109,42 +108,48 @@ func handle(victim net.Conn) {
 	}
 }
 
-func rewriteMsg(src []byte) []byte {
+func rewriteMsg(msg []byte) []byte {
 	re := bogusCoinRE
-	lastMatchEnd := 0 // end position of the most recent match
-	searchPos := 0    // position where we next look for a match
-	var buf []byte
-	s := src
-	endPos := len(s)
+	var res []byte
+	var next, prev byte
 
-	for searchPos <= endPos {
-		s = s[searchPos:]
-		loc := re.FindIndex(s)
-		if loc == nil {
-			break // no more matches
+	log.Printf("processing %s", msg)
+
+	s := msg
+	for {
+		m := re.FindIndex(s)
+		log.Printf("matched %s", re.Find(s))
+
+		if m == nil {
+			// no more matches
+			break
 		}
 
-		// copy the unmatched characters before this match
-		buf = append(buf, s[lastMatchEnd:loc[0]]...)
+		// add unmatched portion of string to result
+		res = append(res, s[0:m[0]]...)
 
-		// insert a copy of the replacement string
-		if loc[1] > lastMatchEnd || loc[0] == 0 {
-			buf = append(buf, []byte(tonysAddress)...)
-		}
-		lastMatchEnd = loc[1]
-
-		// Advance past this match; always advance at least one character.
-		var width int
-		_, width = utf8.DecodeRune(s[searchPos:])
-
-		if searchPos+width > loc[1] {
-			searchPos += width
-		} else if searchPos+1 > loc[1] {
-			searchPos++
+		if m[1] < len(s)-1 {
+			next = s[m[1]]
 		} else {
-			searchPos = loc[1]
+			next = 0
 		}
-	}
+		if m[0]-1 > 0 {
+			prev = s[m[0]-1]
+		} else {
+			prev = 0
+		}
 
-	return append(buf, s...)
+		if next == '-' || prev == '-' {
+			log.Printf("keeping match %s", s[m[0]:m[1]])
+			res = append(res, s[m[0]:m[1]]...)
+		} else {
+			log.Printf("replacing match with %s", tonysAddress)
+			res = append(res, tonysAddress...)
+		}
+
+		s = s[m[1]:]
+		log.Printf("remainder is %s", s)
+		log.Printf("res is %s", res)
+	}
+	return append(res, s...)
 }

@@ -94,6 +94,11 @@ func TestRewriteMsg(t *testing.T) {
 			"[BigHatter29] This is a product ID, not a Boguscoin: 78wV1pf3TfFV04i5AmIm3bmcIS4V-RZC4apb6BT4wGYlPkIRcjHqSgwnBUECbt-1234",
 			"[BigHatter29] This is a product ID, not a Boguscoin: 78wV1pf3TfFV04i5AmIm3bmcIS4V-RZC4apb6BT4wGYlPkIRcjHqSgwnBUECbt-1234",
 		},
+		{
+			"several space separated addresses",
+			"Please pay the ticket price of 15 Boguscoins to one of these addresses: 7pvX8enD62hW5MxPMb9KrjEbNs7qk9Thiy 7HsFao5YLZ4yAlBsfimGe7PTpjh 7xjPa2niQi4ocM8LDSiHRLiqfw",
+			"Please pay the ticket price of 15 Boguscoins to one of these addresses: " + tonysAddress + " " + tonysAddress + " " + tonysAddress,
+		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.test, func(t *testing.T) {
