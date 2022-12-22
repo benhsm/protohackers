@@ -69,6 +69,7 @@ func (b *budgetChatServer) serveBudgetChat() {
 					subscription.receive <- []byte("ok")
 					b.clients = append(b.clients, subscription)
 					var msg string
+					var clientList []string
 					for _, e := range b.clients {
 						if e == subscription {
 							if len(b.clients) == 1 {
@@ -83,10 +84,12 @@ func (b *budgetChatServer) serveBudgetChat() {
 						} else {
 							msg = "* " + subscription.name + " has joined!\n"
 						}
-						log.Printf("Client list: %v", b.clients)
-						log.Printf("Sending '%s' to %s", msg, e.name)
+
+						clientList = append(clientList, e.name)
+						log.Printf("Sending '%s' to %s", msg[:len(msg)-1], e.name)
 						e.receive <- []byte(msg)
 					}
+					log.Printf("Client list: %v", clientList)
 				}
 			case unsub := <-b.unsubch:
 				for i, e := range b.clients {
@@ -98,8 +101,9 @@ func (b *budgetChatServer) serveBudgetChat() {
 					}
 				}
 			case broadcast := <-b.broadcast:
+				name, message, _ := strings.Cut(string(broadcast), "]")
+				log.Printf("%s says:%s", name[1:], message[:len(message)-1])
 				for _, e := range b.clients {
-					name, _, _ := strings.Cut(string(broadcast), "]")
 					if string(name[1:]) == e.name {
 						continue
 					} else {
@@ -174,7 +178,7 @@ func handle(conn net.Conn, unsubch, subch chan *client, broadcast chan []byte) {
 	go func() {
 		for {
 			inmsg := <-c.receive
-			log.Printf("%s Recieved message '%s'", c.name, inmsg)
+			//			log.Printf("%s Recieved message '%s'", c.name, inmsg)
 			_, err := conn.Write([]byte(inmsg))
 			if err != nil {
 				log.Println("Error writing to connection", err)
