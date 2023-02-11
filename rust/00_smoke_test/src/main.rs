@@ -1,5 +1,5 @@
-use log::{ info, error, debug };
-use tokio::{net::TcpListener, io::{self, AsyncReadExt, AsyncWriteExt}};
+use log::{ info, error };
+use tokio::{net::TcpListener, io};
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
@@ -13,31 +13,12 @@ async fn main() -> io::Result<()> {
         info!("accepting new connection from: {}", addr);
 
         tokio::spawn(async move {
-            let mut buf  = [0; 1024];
-            loop {
-                match conn.read(&mut buf).await {
-                    Ok(0) => {
-                        info!("recieved EOF from: {}", addr);
-                        return;
-                    },
-                    Ok(n) => {
-                        if let Err(err) = conn.write_all(&mut buf[..n]).await {
-                            error!("unexpected error writing to connection {:?}: {}",
-                                   addr,
-                                   err);
-                            return;
-                        }
-                        info!("wrote {} bytes to {}", n, addr); 
-                        debug!("content of message to {}: {:?}", addr, &buf[..n]);
-                    },
-                    Err(err) => {
-                        error!("unexpected error on connection {}: {}",
-                               addr,
-                               err);
-                        return;
-                    }
-                }
+            let (mut rd, mut wr) = conn.split();
+
+            if io::copy(&mut rd, &mut wr).await.is_err() {
+                error!("failed to echo data to {}", addr)
             }
+            info!("closing connection to {}", addr);
         });
     }
 }
